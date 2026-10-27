@@ -36,6 +36,15 @@ int main()
     // Player contains a self-pointer, reset it after the value is returned.
     auto initialize = [&](Player& player) { player.PlayerTalkClass = &player.talk; };
     int checks = 0;
+    {
+        auto p = fresh(); initialize(p);
+        Require(p.talk.sentMenus == 1 && p.talk.menu.id == 1 && p.talk.menu.items.size() == 2);
+        Require(p.talk.interaction.SourceGuid == npc.GetGUID() && p.talk.textId == DEFAULT_GOSSIP_MESSAGE);
+        p.team = HORDE;
+        ai.GossipHello(&p);
+        Require(p.talk.menu.items.size() == 1 && p.talk.menu.items.at(0).OptionType == 1);
+        ++checks;
+    }
     auto rejected = [&](auto mutate)
     {
         auto player = fresh(); initialize(player);

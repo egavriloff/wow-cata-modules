@@ -108,38 +108,45 @@ SQL is **manual**, targets the **world** database, and was not executed during
 development. Install only against a fully updated world schema matching the
 pinned core; the old base schema alone is insufficient.
 
-1. Review [sql/world/install.sql](sql/world/install.sql). Entry **900100** has no
-   matches in the checked-out TCPP SQL/source or pre-existing workspace module.
-   Check both `creature_template.entry` and `creature_template_model.CreatureID`
-   in your live database first; custom live data cannot be checked offline.
-2. If unused, run the SQL manually with a UTF-8 capable MySQL client against
-   your world database. It inserts a dedicated level 85 neutral teleporter,
-   `npcflag=1` (`UNIT_NPC_FLAG_GOSSIP`), empty `AIName` and
-   `ScriptName='npc_teleport'`, plus its display model record. Display ID 19646
-   is present in TCPP's `2023_09_15_00_world.sql` for client build 15595.
-3. The script checks both tables, never deletes/updates/replaces existing
-   content, and inserts the model only when it just inserted the template.
-   A pre-existing ID leaves everything unchanged. Inspect the final SELECTs;
-   an unrelated occupant/orphan model needs operator review and a different
-   checked entry in the SQL and spawn command. Repeating installation does not
-   repair existing records. Do not use a MySQL mode that continues after SQL
-   errors; investigate and roll back a failed transaction.
-4. Restart worldserver after installation, log in with appropriate GM command
-   permission, stand at the desired location and run:
-
-   ```text
-   .npc add 900100
-   ```
-
-   TCPP creates the persistent `creature` spawn with the current position/phase;
-   no fixed GUID or arbitrary spawn coordinates are included. Use a normal
-   visible world phase. Check faction menus with normal Horde and Alliance
-   characters as well as a GM.
+1. Stop worldserver, and review [sql/world/install.sql](sql/world/install.sql).
+   Entry **900100** is this module's dedicated custom NPC. The script now
+   creates **or repairs** its template and model, including existing installs.
+   Do not apply it if you have reassigned 900100 to unrelated custom content.
+2. Execute the SQL manually in the matching, fully updated world database with
+   a UTF-8 capable MySQL client. `SET NAMES utf8mb4` protects the Russian name.
+   Fresh insert and repeat update set neutral faction 35, level 85, `npcflag=1`,
+   empty `AIName`, normal interaction flags and `ScriptName='npc_teleport'`.
+3. The wizard appearance is **Windle Sparkshine**, reference NPC entry **29261**,
+   actual **CreatureDisplayID 26078**, index 0, probability 1. The checked-out
+   TCPP `sql/updates/world/4.3.4/2023_09_15_00_world.sql` contains the exact row
+   `(29261, 0, 26078, 1, 15595)`. Only custom NPC 900100 is changed: model index 0
+   is upserted and other models belonging to 900100 are removed. Neither the
+   temporary guard 3167 nor the former model 19646 remains a selectable model
+   for this NPC. The reference NPC is never modified. There is no `DisplayScale`
+   column in this schema and none is used.
+4. Existing `creature` spawns for `id=900100` have appearance, flag and script
+   overrides cleared, so they inherit the repaired template. GUIDs, positions,
+   phases, equipment and respawn settings remain. Spawn `modelid` becomes 0;
+   `npcflag`, `unit_flags` and `unit_flags2` become **NULL**, not zero. Current
+   TCPP treats a present zero flag as an explicit override: `npcflag=0` would
+   disable gossip despite the template's flag 1. ScriptName becomes empty.
+   Review the final SELECTs;
+   the model must be 26078 and the script must be `npc_teleport`. On any SQL
+   error, roll back and investigate; do not force the client to continue.
+5. Deploy the newly built worldserver from
+   `.build/install/windows-modules/RelWithDebInfo/` to your server installation,
+   then **start a new worldserver process**. A template reload does not restore
+   a script rejected at startup. Check its registration messages as described in
+   [runtime-diagnostics.md](runtime-diagnostics.md).
+6. Use the existing spawn, or log in with GM command permission, stand at the
+   desired location and run `.npc add 900100` if no spawn exists. Test with
+   normal Horde and Alliance characters as well as a GM.
 
 Current `ObjectMgr::LoadCreatureTemplateModels` uses `creature_template_model`;
 legacy `modelid1` alone would leave the NPC without an effective display model.
-The `creature` spawn has no overriding `ScriptName`, so the template's binding
-is used. No SQL updater/migration framework is installed by this module.
+No extra database `gossip_menu`, `gossip_menu_option` or `npc_text` row is needed
+for these scripted items: TCPP's missing-text query handler supplies its own
+fallback. No SQL updater/migration framework is installed by this module.
 
 ## Selection and payment safety
 
@@ -163,16 +170,27 @@ Executed successfully on Windows with the existing dependencies and workflow:
 - Manifest validation/discovery: both `mod-example` and `mod-npc-teleport`
   selected in deterministic order.
 - Existing Python integration suite: **25 tests passed, no skips**.
-- Module suite: **6 tests passed, no skips**. Five offline data tests cover all
+- Module suite: **13 tests passed, no skips**. Five offline data tests cover all
   226 audited donor rows, exact retained fields, exclusions, finite/bounded
   coordinates, approved map IDs, costs, both factions and every level 1–85,
   menu capacity, reachability and back navigation.
 - One C++ harness compiles the **actual script** with minimal test doubles and
-  executes **27 gossip/payment/registration scenarios**: invalid list/action,
+  executes **28 gossip/payment/registration scenarios**: invalid list/action,
   wrong menu/sender/source, faction/level changes, combat and state restrictions,
   unavailable maps/terrain/access, insufficient money, `TeleportTo` rejection,
   uint32 maximum cost, repeated selection, navigation and single registration.
-  These doubles do not validate TCPP services or network packets.
+  The hello test also checks populated menus, the interaction source and faction
+  filtering. These doubles do not validate TCPP services or network packets.
+- Seven installation tests parse fresh/repair SQL values, reconstruct the three
+  referenced tables from the repository base DDL and chronologically ordered
+  world updates, and check every INSERT/upsert, UPDATE, DELETE and SELECT column.
+  They also check mandatory fields, NULL spawn-flag inheritance, Windle's model,
+  script-name/entrypoint consistency and strict source/SQL UTF-8. Negative cases
+  reject obsolete columns and unsupported installer statements. Unknown table
+  alteration syntax fails validation rather than silently retaining old fields.
+- A compiled UTF-8 probe emits all **206 actual module strings** (202 data labels
+  plus four messages), which must decode strictly and equal the source strings.
+  MSVC `/utf-8` is scoped to this module target, with no global encoding change.
 - `tools/build.ps1`: real TCPP CMake configure, `RelWithDebInfo` compile/link,
   install and dependency copying succeeded with both modules enabled. The
   module objects and generated loader are linked into the real worldserver.
@@ -189,9 +207,9 @@ python -m unittest discover -s modules/mod-npc-teleport/tests -v
 .\tools\build.ps1
 ```
 
-Build output: `.build/npc-teleport-build.log`; integration tests:
-`.build/npc-teleport-integration-tests.log`; module tests:
-`.build/npc-teleport-tests.log`. Generated selection and loader are under
+Build output: `.build/npc-teleport-fix-build.log`; integration tests:
+`.build/npc-teleport-fix-integration-tests.log`; module tests:
+`.build/npc-teleport-fix-tests.log`. Generated selection and loader are under
 `.build/windows-modules/workspace-modules/`; installed worldserver is under
 `.build/install/windows-modules/RelWithDebInfo/`. Existing nonfatal CMP0218
 integration policy warnings remain; the integration framework was not changed.
@@ -203,3 +221,21 @@ in-game testing was performed. NPC visibility, actual client menus/icons,
 all arrival positions, phase/quest interactions and real core access failures
 remain operator acceptance checks. No commits, pushes or submodule revision
 updates were made.
+
+## Runtime investigation and remaining acceptance
+
+The supplied `DBErrors.log` contains `Script named 'npc_teleport' does not have
+a script name assigned in database.` TCPP's registry rejects such an object at
+startup. The original installer also skipped repairs whenever the template
+already existed. The new installer repairs that state before a full restart.
+The log lacks timestamps, so it does not prove which restart lacked the binding.
+The old deployed executable matched the prior build SHA-256 and contained all
+206 expected UTF-8 strings. All three supplied log files decoded as UTF-8;
+the reported conversion-error text was absent from them. No evidence identifies
+this module as the source of that intermittent console error.
+
+See [runtime-diagnostics.md](runtime-diagnostics.md) for the inspected source
+chain, configuration for quiet-by-default debug logging, and precise in-game
+and UTF-8 reproduction steps. These fixes have not been deployed automatically;
+SQL has not been executed, and successful gossip operation with the repaired
+live database remains an operator verification.

@@ -10,7 +10,7 @@ using uint64 = std::uint64_t;
 using int64 = std::int64_t;
 constexpr uint32 HORDE = 67, ALLIANCE = 469, UNIT_NPC_FLAG_GOSSIP = 1;
 constexpr uint32 GOSSIP_SENDER_MAIN = 1, DEFAULT_GOSSIP_MESSAGE = 0xffffff;
-enum GossipOptionIcon { GOSSIP_ICON_TAXI = 2 };
+enum GossipOptionIcon { GOSSIP_ICON_TAXI = 2, GOSSIP_ICON_TALK = 0, GOSSIP_ICON_TRAINER = 3, GOSSIP_ICON_BATTLE = 9 };
 struct Creature;
 struct GossipMenuItem { uint32 Sender, OptionType; };
 struct GossipMenu
@@ -23,10 +23,12 @@ struct GossipMenu
         return it == items.end() ? nullptr : &it->second;
     }
     uint32 GetMenuId() const { return id; }
+    uint32 GetMenuItemCount() const { return uint32(items.size()); }
 };
 struct Interaction { uint64 SourceGuid = 0; };
 struct PlayerMenu
 {
+    uint32 sentMenus = 0, textId = 0;
     GossipMenu menu;
     Interaction interaction;
     GossipMenu& GetGossipMenu() { return menu; }
@@ -57,7 +59,21 @@ struct Player
     bool TeleportTo(uint32, float, float, float, float) { ++calls; return accepted; }
     bool ModifyMoney(int64 delta) { debited += delta; money += delta; return true; }
 };
-struct Creature { uint64 GetGUID() const { return 42; } };
+struct Creature
+{
+    uint64 GetGUID() const { return 42; }
+    uint32 GetEntry() const { return 900100; }
+    uint32 GetScriptId() const { return 17; }
+};
+struct ObjectMgr
+{
+    uint32 GetScriptId(char const* name) const { return std::string(name) == "npc_teleport" ? 17 : 0; }
+};
+inline ObjectMgr objectMgr;
+inline ObjectMgr* sObjectMgr = &objectMgr;
+#define TC_LOG_DEBUG(...) do { } while (false)
+#define TC_LOG_INFO(...) do { } while (false)
+#define TC_LOG_ERROR(...) do { } while (false)
 struct CreatureAI { virtual ~CreatureAI() = default; };
 struct PassiveAI : CreatureAI
 {
@@ -118,6 +134,8 @@ inline void AddGossipItemFor(Player* player, GossipOptionIcon, std::string const
 }
 inline void SendGossipMenuFor(Player* player, uint32, Creature* creature)
 {
+    ++player->talk.sentMenus;
+    player->talk.textId = DEFAULT_GOSSIP_MESSAGE;
     player->talk.interaction.SourceGuid = creature->GetGUID();
 }
 inline void CloseGossipMenuFor(Player* player) { player->closed = true; }

@@ -10,6 +10,8 @@
 #include "Chat.h"
 #include "Creature.h"
 #include "DBCStores.h"
+#include "Log.h"
+#include "ObjectMgr.h"
 #include "Map.h"
 #include "MapManager.h"
 #include "Player.h"
@@ -53,6 +55,8 @@ void ShowMenu(Player* player, Creature* creature, uint32 menu)
     }
     // The donor's custom npc_text IDs were not supplied with any text records.
     SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature);
+    TC_LOG_DEBUG("modules.npc_teleport", "[mod-npc-teleport] GossipMenu sent: menu=%u items=%u text=%u",
+        menu, player->PlayerTalkClass->GetGossipMenu().GetMenuItemCount(), uint32(DEFAULT_GOSSIP_MESSAGE));
 }
 
 class NpcTeleport final : public CreatureScript
@@ -66,12 +70,15 @@ public:
 
         bool GossipHello(Player* player) override
         {
+            TC_LOG_DEBUG("modules.npc_teleport", "[mod-npc-teleport] GossipHello: entry=%u scriptId=%u",
+                me->GetEntry(), me->GetScriptId());
             ShowMenu(player, me, 1);
             return true;
         }
 
         bool GossipSelect(Player* player, uint32 menuId, uint32 gossipListId) override
         {
+            TC_LOG_DEBUG("modules.npc_teleport", "[mod-npc-teleport] GossipSelect: menu=%u listId=%u", menuId, gossipListId);
             auto const& menu = player->PlayerTalkClass->GetGossipMenu();
             GossipMenuItem const* item = menu.GetItem(gossipListId);
             if (!item || menuId != menu.GetMenuId() || item->Sender != GOSSIP_SENDER_MAIN ||
@@ -143,11 +150,22 @@ public:
         }
     };
 
-    CreatureAI* GetAI(Creature* creature) const override { return new AI(creature); }
+    CreatureAI* GetAI(Creature* creature) const override
+    {
+        TC_LOG_DEBUG("modules.npc_teleport", "[mod-npc-teleport] GetAI: entry=%u scriptId=%u",
+            creature->GetEntry(), creature->GetScriptId());
+        return new AI(creature);
+    }
 };
 }
 
 void Addmod_npc_teleportScripts()
 {
+    uint32 const scriptId = sObjectMgr->GetScriptId("npc_teleport");
+    TC_LOG_INFO("server.loading", "[mod-npc-teleport] Loader called: npc_teleport database scriptId=%u", scriptId);
     new NpcTeleport();
+    if (scriptId)
+        TC_LOG_INFO("server.loading", "[mod-npc-teleport] npc_teleport registration completed");
+    else
+        TC_LOG_ERROR("server.loading", "[mod-npc-teleport] npc_teleport is not bound in the loaded world database; apply module SQL before a full worldserver restart");
 }
