@@ -1,0 +1,112 @@
+# NPC Transmogrifier for TCPP 4.3.4
+
+Static workspace module targeting TCPP
+`b061f46ef86f84f713ea3956b2318383e0b71278` and client 4.3.4.15595.
+See [compatibility investigation](compatibility.md) and [attribution](NOTICE.md).
+Compilation and offline tests do not establish in-game correctness.
+Executed checks and binary linkage evidence are recorded in [verification.md](verification.md).
+
+## Installation
+
+1. Build from the workspace with `./tools/build.ps1 -Configuration RelWithDebInfo`.
+   `module.json` enables discovery; `Addmod_npc_transmogrifierScripts` registers
+   the `npc_transmogrifier` CreatureScript and configuration WorldScript.
+2. Append the settings from `conf/transmogrification.conf.dist` to the existing
+   `[worldserver]` section in the installed `worldserver.conf`. The fragment is
+   not loaded or copied automatically. Do not add another INI section or call
+   `ConfigMgr::LoadInitial` for this module. Startup and `.reload config` read
+   the same settings through native `ConfigMgr`.
+3. Back up databases and stop worldserver/other writers. Review the migrations.
+   Use the workspace SQL updater explicitly, with the installed configuration:
+
+   ```powershell
+   python tools/sql-updater/update.py plan --target characters --target world --module mod-npc-transmogrifier --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+   python tools/sql-updater/update.py apply --target characters --target world --module mod-npc-transmogrifier --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+   ```
+
+   No SQL is executed by the build. `sql/characters/001_sets.sql` creates only
+   `custom_transmogrification_sets`. `sql/world/001_npc.sql` installs optional
+   template 900101, model 26078 and binding `npc_transmogrifier`; it creates no
+   spawn. Target selection can install characters independently of world.
+   World preconditions refuse existing NPC-900101 data rather than overwrite
+   an unknown custom installation. The SQL itself is idempotent for manual
+   repair of module-owned rows. No adoption assertions are supplied; an existing
+   manual installation needs reviewed assertions before updater adoption.
+4. Restart worldserver. Verify the script binding before explicitly spawning
+   template 900101 at a location selected by an administrator. No automatic
+   spawn is provided. Existing module-owned spawns inherit template flags via
+   NULL overrides, modelid=0 and empty per-spawn ScriptName.
+
+The native transmogrifier NPC flag is intentionally absent: the Gossip module
+handles its own pricing and compatibility. Adding the native flag also exposes
+the separate native packet handler and its pricing rules.
+
+## Gameplay and configuration
+
+Choose an equipped slot, then an eligible item from backpack or equipped bags.
+The source's base item entry is used, rather than its own applied appearance.
+Source items remain owned by the player; BoE/BoU sources become bound. Source
+and target lose refund/group-trade eligibility, following native TCPP behavior.
+Individual and full equipped-appearance removal are free.
+
+All supplied donor configuration keys and defaults are retained. The quality,
+allow/deny lists, faction, class, race, skill, spell, level, holiday, armor and
+weapon rules use actual TCPP template getters. Allowed entries override donor
+quality/requirement filters; denied entries otherwise fail. Structural item
+class and inventory compatibility still apply. `IgnoreReqStats` remains a
+compatibility no-op, as in the supplied donor; statless items are accepted by
+the custom Gossip policy. This policy is intentionally more permissive than
+`Item::CanTransmogrifyItemWithItem` and is not advertised as native eligibility.
+The donor's unsafe unconditional weapon-to-offhand shortcut is removed; mixed
+ranged subclasses require both items to be ranged. Cataclysm's separate ranged
+equipment slot is included.
+
+Gold is charged on application after validation. Tokens are additional; zero
+entry/count with RequireToken enabled rejects the operation. A token entry
+matching source or target is rejected to prevent consuming a referenced item.
+Negative, non-finite or overflowing prices reject payment rather than becoming
+free. Explicit zero prices remain supported. The displayed gold quote is
+rechecked at selection, including after configuration reload.
+
+Sets store authorized appearances already present on the owner's equipment.
+Creating a set costs the configured appearance-price sum; applying and deleting
+it are free, preserving donor behavior. Applying a set does not consume tokens
+or require the original source item again. This is an intentional preset policy,
+not a collection system. Every saved slot is checked before any item changes;
+an incompatible, missing, duplicate or malformed slot rejects the whole set.
+At most ten sets are supported. Names are valid UTF-8, 1–48 bytes, without control
+characters or WoW markup separators. Database escaping protects quotes; data
+contains only generated integers. Never import untrusted preset rows.
+
+Russian menu actions and confirmations use UTF-8, compiled with `/utf-8` on MSVC.
+Item links use TCPP's default-locale template names; this module does not alter
+localization projects or provide a per-locale string database.
+
+## Validation and acceptance
+
+```powershell
+$env:CMAKE = 'D:\DevTools\cmake\bin\cmake.exe' # optional compiler-tool location
+python -m unittest discover -s tools/module-integration/tests -v
+python -m unittest discover -s tools/sql-updater/tests -v
+python -m unittest discover -s modules/mod-npc-transmogrifier/tests -v
+```
+
+The module harness compiles the real script with test doubles for core services.
+It checks price overflow, template restrictions, ownership, trade state, menu
+origin/ID, stale price quotes, gold/tokens, binding, replay, set parsing and
+all-or-nothing application, and loader registration. Offline schema checks use
+the checked-out core and the actual workspace SQL catalog/parser. These checks
+do not execute MySQL or simulate the 4.3.4 client.
+
+Before deployment, test on disposable databases: migration apply/reapply and
+schema, registration at startup, slot/back/close navigation, bag selection,
+gold/token deductions and failed payments, individual/all removal, set
+create/apply/delete, names with quotes and Russian text, config reload, item
+binding, and invalidated selections after item movement. Confirm appearance in
+inventory tooltips, character paper doll and from a second player's client;
+then logout/relog and restart worldserver. Inspect native enchantments and
+money/inventory persistence. Verify refund and trade restrictions.
+
+See `compatibility.md` for database failure semantics and unverified runtime
+conditions. No server startup, NPC interaction, appearance change or persistence
+test against a running server is claimed.
