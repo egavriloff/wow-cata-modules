@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "migrations": [
+    {
+      "file": "world/install.sql",
+      "before": [
+        {"table": "creature_template", "where": {"entry": 900100}, "count": 0},
+        {"table": "creature_template_model", "where": {"CreatureID": 900100}, "count": 0},
+        {"table": "creature", "where": {"id": 900100}, "count": 0},
+        {"table": "npc_text", "where": {"ID": 900100}, "count": 0}
+      ],
+      "adopt": [
+        {
+          "table": "creature_template",
+          "where": {"entry": 900100},
+          "count": 1,
+          "values": {
+            "name": "Телепортатор", "femaleName": "", "subname": "",
+            "minlevel": 85, "maxlevel": 85, "faction": 35, "npcflag": 1,
+            "BaseAttackTime": 2000, "RangeAttackTime": 2000, "unit_class": 1,
+            "type": 7, "unit_flags": 0, "unit_flags2": 0, "AIName": "",
+            "ScriptName": "npc_teleport"
+          }
+        },
+        {
+          "table": "creature_template_model",
+          "where": {"CreatureID": 900100},
+          "count": 1,
+          "values": {"Idx": 0, "CreatureDisplayID": 26078, "Probability": 1, "VerifiedBuild": 0}
+        },
+        {
+          "table": "creature",
+          "where": {"id": 900100},
+          "values": {"modelid": 0, "npcflag": null, "unit_flags": null, "unit_flags2": null, "ScriptName": ""}
+        },
+        {
+          "table": "npc_text",
+          "where": {"ID": 900100},
+          "count": 1,
+          "values": {
+            "text0_0": "Куда отправимся, $N? Выберите раздел, а затем место назначения.",
+            "text0_1": "Куда отправимся, $N? Выберите раздел, а затем место назначения.",
+            "Probability0": 1, "BroadcastTextID0": 0, "lang0": 0
+          }
+        }
+      ]
+    },
+    {
+      "file": "world/gossip_text.sql",
+      "adopt": [
+        {
+          "table": "npc_text",
+          "where": {"ID": 900100},
+          "count": 1,
+          "values": {
+            "text0_0": "Куда отправимся, $N? Выберите раздел, а затем место назначения.",
+            "text0_1": "Куда отправимся, $N? Выберите раздел, а затем место назначения.",
+            "Probability0": 1, "BroadcastTextID0": 0, "lang0": 0
+          }
+        }
+      ]
+    }
+  ]
+}
