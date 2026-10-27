@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "id": "mod-npc-teleport",
+  "version": "0.1.0",
+  "entrypoint": "Addmod_npc_teleportScripts",
+  "core_revision": "b061f46ef86f84f713ea3956b2318383e0b71278",
+  "integration_api": 1,
+  "requires": []
+}
