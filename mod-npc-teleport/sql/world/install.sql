@@ -38,6 +38,13 @@ DELETE FROM `creature_template_model` WHERE `CreatureID` = 900100 AND `Idx` <> 0
 -- 2025_03_11_03_world.sql removes dynamicflags from both creature tables.
 UPDATE `creature` SET `modelid` = 0, `npcflag` = NULL, `unit_flags` = NULL,
     `unit_flags2` = NULL, `ScriptName` = '' WHERE `id` = 900100;
+-- Module-owned greeting used by the scripted menu (not a database menu binding).
+INSERT INTO `npc_text` (`ID`, `text0_0`, `text0_1`, `Probability0`, `BroadcastTextID0`, `lang0`)
+VALUES (900100, 'Куда отправимся, $N? Выберите раздел, а затем место назначения.', 'Куда отправимся, $N? Выберите раздел, а затем место назначения.', 1, 0, 0)
+ON DUPLICATE KEY UPDATE
+    `text0_0` = 'Куда отправимся, $N? Выберите раздел, а затем место назначения.',
+    `text0_1` = 'Куда отправимся, $N? Выберите раздел, а затем место назначения.',
+    `Probability0` = 1, `BroadcastTextID0` = 0, `lang0` = 0;
 COMMIT;
 
 SELECT `entry`, `name`, `faction`, `npcflag`, `AIName`, `ScriptName`

@@ -207,3 +207,19 @@ does not reference those obsolete fields or DisplayScale. NPC 900100, script
 `npc_teleport`, template gossip flag 1 and display 26078 remain unchanged.
 This is offline structural validation, not execution against MySQL. Apply the
 corrected installer manually with the server stopped, then fully restart it.
+
+
+## Menu UX revision
+
+The operator subsequently confirmed working in-game gossip and teleportation.
+The presentation revision uses `npc_text.ID=900100` for a new Russian greeting;
+its optional `sql/world/gossip_text.sql` is sufficient for existing installations.
+The full installer contains the same greeting. This does not add a DB menu
+binding or change the earlier missing-text fallback diagnosis.
+
+Current validation: 15 module tests pass, the real RelWithDebInfo configure,
+compile/link/install passes, and the C++ harness executes 29 scenarios including
+explicit Close. The compiled-string probe checks 215 strings. Historical counts
+above describe the prior builds. The historical source audit still documents
+226 donor rows; the current table has 180 destinations and 30 navigation rows.
+See README for the exact category layout and remaining client visual review.

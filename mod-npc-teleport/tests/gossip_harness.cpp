@@ -38,11 +38,11 @@ int main()
     int checks = 0;
     {
         auto p = fresh(); initialize(p);
-        Require(p.talk.sentMenus == 1 && p.talk.menu.id == 1 && p.talk.menu.items.size() == 2);
-        Require(p.talk.interaction.SourceGuid == npc.GetGUID() && p.talk.textId == DEFAULT_GOSSIP_MESSAGE);
+        Require(p.talk.sentMenus == 1 && p.talk.menu.id == 1 && p.talk.menu.items.size() == 3);
+        Require(p.talk.interaction.SourceGuid == npc.GetGUID() && p.talk.textId == TeleportText::GreetingId);
         p.team = HORDE;
         ai.GossipHello(&p);
-        Require(p.talk.menu.items.size() == 1 && p.talk.menu.items.at(0).OptionType == 1);
+        Require(p.talk.menu.items.size() == 2 && p.talk.menu.items.at(0).OptionType == 1);
         ++checks;
     }
     auto rejected = [&](auto mutate)
@@ -54,7 +54,7 @@ int main()
         ++checks;
     };
     rejected([](Player& p) { p.talk.menu.items.clear(); });
-    rejected([](Player& p) { p.talk.menu.items.at(0).OptionType = std::numeric_limits<uint32>::max(); });
+    rejected([](Player& p) { p.talk.menu.items.at(0).OptionType = std::numeric_limits<uint32>::max() - 1; });
     rejected([](Player& p) { p.talk.menu.items.at(0).Sender = 9; });
     rejected([](Player& p) { p.talk.menu.id = 2; });
     rejected([](Player& p) { p.talk.menu.items.at(0).OptionType = 2; });
@@ -98,6 +98,12 @@ int main()
         auto p = fresh(); initialize(p);
         ai.GossipSelect(&p, 1, std::numeric_limits<uint32>::max());
         Require(p.calls == 0 && p.debited == 0); ++checks;
+    }
+    {
+        auto p = fresh(); initialize(p);
+        ai.GossipSelect(&p, 1, 2);
+        Require(p.closed && p.talk.menu.items.empty() && p.calls == 0 && p.debited == 0);
+        ++checks;
     }
     Addmod_npc_teleportScripts();
     Require(CreatureScript::registered == std::vector<std::string>{"npc_teleport"}); ++checks;

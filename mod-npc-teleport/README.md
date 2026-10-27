@@ -13,16 +13,18 @@ GPL-2.0-or-later terms. The supplied donor has no pinned source revision.
 
 ## Destinations and presentation
 
-The port retains **180 destinations and 22 navigation rows** across cities,
+The port retains **180 destinations and 30 navigation rows** across cities,
 Classic/TBC/WotLK/Cataclysm dungeons, raids, Eastern Kingdoms, Kalimdor,
-Outland, Northrend, Cataclysm zones and outdoor PvP locations. Original order,
-Russian labels, icons, faction restrictions, costs, coordinates and orientation
-are preserved for retained destinations. All shipped costs and minimum levels
+Outland, Northrend, Cataclysm zones and outdoor PvP locations. Faction restrictions, costs, minimum levels, map IDs, coordinates and
+orientation are preserved for every retained destination. Labels, icons and menu
+membership are polished as described below. All shipped costs and minimum levels
 are zero; the donor has no class restriction. Core starting-zone/class/race
 restrictions still apply through `Player::TeleportTo`.
 
 [destination-audit.csv](destination-audit.csv) accounts for **all 226 donor
-rows**, with the exact original fields, disposition, reason and target menu.
+rows**, with the exact original fields, disposition, reason and original port
+menu assignment. It is a historical donor audit; current UI menu assignments
+are defined in `src/teleport_data.cpp`.
 `donor_index` is zero based. No replacement coordinates or silent map redirects
 were introduced. Two compatible outdoor entrances originally grouped under
 Pandaria, Scholomance and Scarlet Monastery, move to Classic dungeons with
@@ -31,11 +33,46 @@ remaining links, including their back links.
 
 Only Russian player-facing text was supplied. It remains Russian for every
 client locale; there is no English translation or new localization framework.
-Additional messages live in `src/teleport_text.h`. The donor references custom
-`npc_text` IDs 300000–300004 but supplies no text or SQL records. This port uses
-TCPP's `DEFAULT_GOSSIP_MESSAGE` instead of depending on missing records; custom
-greeting text cannot be recovered from the supplied module. Existing icons and
-spelling (including questionable icon paths) are preserved.
+Additional messages live in `src/teleport_text.h`. The original donor's custom
+`npc_text` IDs 300000–300004 were not supplied. The polished menu uses its own
+Russian greeting in `npc_text.ID=900100`, installed by the module SQL. Large
+embedded texture tags, donor bracketed navigation and popup padding are removed.
+
+### Current menu layout
+
+| Main-menu item | Contents |
+| --- | --- |
+| Города Альянса / Города Орды | Only the player's own faction category is shown; original city restrictions remain |
+| Нейтральные города | Dalaran and Shattrath |
+| Подземелья: Classic | Classic approaches, including Scholomance and Scarlet Monastery |
+| Подземелья: BC | The Burning Crusade approaches |
+| Подземелья: WotLK | Wrath approaches, now also including the former Cataclysm-menu Nexus entry |
+| Подземелья: Cataclysm | Cataclysm dungeon approaches; raid approaches moved to Raids |
+| Рейды | Original raid approaches plus Blackwing Descent, Bastion of Twilight, Throne of the Four Winds, Baradin Hold, Firelands and Dragon Soul |
+| PvP и арены | Existing outdoor PvP locations and arena approaches; no battleground queue or new map |
+| Путешествия по миру | Eastern Kingdoms, Kalimdor, Outland, Northrend and Cataclysm zones |
+
+The visible root contains nine categories plus **Закрыть**. Cities, dungeons,
+raids and PvP destinations are one category below the root; world zones are two.
+All child pages end with **Назад**, then **Закрыть**. Zone Back returns to the
+world page; other Back items return to the root. The client-native farewell
+button remains available. The longest page has 29 items including Back/Close,
+within TCPP's 32-item limit. No empty opposing-faction city category is shown.
+
+Categories and navigation use the small standard gossip talk icon; destinations
+use the standard taxi icon. No embedded textures, oversized icons or color tags
+are used in menu labels. Expansion names consistently use Classic / BC / WotLK /
+Cataclysm. A few spelling/case corrections are explicit in the preservation test;
+shared Nexus and Frozen Halls approaches are labelled as common entrances.
+Confirmation reads `Отправиться в выбранное место?`, followed by the destination.
+The greeting is `Куда отправимся, $N? Выберите раздел, а затем место назначения.`
+
+For an **already installed, working NPC**, apply only
+[sql/world/gossip_text.sql](sql/world/gossip_text.sql) manually to the world
+DB and restart worldserver after deploying the new executable. That file only
+upserts this module's greeting. Fresh installation includes the same text in
+`install.sql`; no NPC flags, model or gameplay SQL change was needed for UX.
+Without the text update, TCPP's standard missing-text greeting remains usable.
 
 ### Excluded destinations
 
@@ -50,8 +87,9 @@ spelling (including questionable icon paths) are preserved.
 
 Thus **19 post-Cataclysm destinations**, one incorrect map/position pairing and
 four category navigation rows are excluded. IDs 6 and 13 are no longer menus.
-Existing expansion/category oddities such as Nexus under Cataclysm and raids
-under its dungeon menu are otherwise retained.
+The UX revision moves Nexus from the Cataclysm category to WotLK and the six
+Cataclysm raid approaches to Raids. Every destination row remains available,
+including shared entrances and duplicate approaches.
 
 ### Map and access audit
 
@@ -144,9 +182,8 @@ pinned core; the old base schema alone is insufficient.
 
 Current `ObjectMgr::LoadCreatureTemplateModels` uses `creature_template_model`;
 legacy `modelid1` alone would leave the NPC without an effective display model.
-No extra database `gossip_menu`, `gossip_menu_option` or `npc_text` row is needed
-for these scripted items: TCPP's missing-text query handler supplies its own
-fallback. No SQL updater/migration framework is installed by this module.
+No database `gossip_menu` or `gossip_menu_option` binding is needed for these
+scripted items. The included `npc_text` row supplies only the greeting. No SQL updater/migration framework is installed by this module.
 
 ## Selection and payment safety
 
@@ -170,26 +207,27 @@ Executed successfully on Windows with the existing dependencies and workflow:
 - Manifest validation/discovery: both `mod-example` and `mod-npc-teleport`
   selected in deterministic order.
 - Existing Python integration suite: **25 tests passed, no skips**.
-- Module suite: **13 tests passed, no skips**. Five offline data tests cover all
+- Module suite: **15 tests passed, no skips**. Six offline data tests cover all
   226 audited donor rows, exact retained fields, exclusions, finite/bounded
   coordinates, approved map IDs, costs, both factions and every level 1–85,
   menu capacity, reachability and back navigation.
 - One C++ harness compiles the **actual script** with minimal test doubles and
-  executes **28 gossip/payment/registration scenarios**: invalid list/action,
+  executes **29 gossip/payment/registration scenarios**: invalid list/action,
   wrong menu/sender/source, faction/level changes, combat and state restrictions,
   unavailable maps/terrain/access, insufficient money, `TeleportTo` rejection,
   uint32 maximum cost, repeated selection, navigation and single registration.
   The hello test also checks populated menus, the interaction source and faction
   filtering. These doubles do not validate TCPP services or network packets.
-- Seven installation tests parse fresh/repair SQL values, reconstruct the three
+- Eight installation tests parse fresh/repair SQL values, reconstruct the four
   referenced tables from the repository base DDL and chronologically ordered
   world updates, and check every INSERT/upsert, UPDATE, DELETE and SELECT column.
   They also check mandatory fields, NULL spawn-flag inheritance, Windle's model,
-  script-name/entrypoint consistency and strict source/SQL UTF-8. Negative cases
+  script-name/entrypoint consistency, greeting consistency between full/text-only
+  installers, and strict source/SQL UTF-8. Negative cases
   reject obsolete columns and unsupported installer statements. Unknown table
   alteration syntax fails validation rather than silently retaining old fields.
-- A compiled UTF-8 probe emits all **206 actual module strings** (202 data labels
-  plus four messages), which must decode strictly and equal the source strings.
+- A compiled UTF-8 probe emits all **215 actual module strings** (210 data labels
+  plus five messages), which must decode strictly and equal the source strings.
   MSVC `/utf-8` is scoped to this module target, with no global encoding change.
 - `tools/build.ps1`: real TCPP CMake configure, `RelWithDebInfo` compile/link,
   install and dependency copying succeeded with both modules enabled. The
@@ -207,9 +245,9 @@ python -m unittest discover -s modules/mod-npc-teleport/tests -v
 .\tools\build.ps1
 ```
 
-Build output: `.build/npc-teleport-fix-build.log`; integration tests:
+Build output: `.build/npc-teleport-ux-build.log`; integration tests:
 `.build/npc-teleport-fix-integration-tests.log`; module tests:
-`.build/npc-teleport-fix-tests.log`. Generated selection and loader are under
+`.build/npc-teleport-ux-tests.log`. Generated selection and loader are under
 `.build/windows-modules/workspace-modules/`; installed worldserver is under
 `.build/install/windows-modules/RelWithDebInfo/`. Existing nonfatal CMP0218
 integration policy warnings remain; the integration framework was not changed.
@@ -239,3 +277,10 @@ chain, configuration for quiet-by-default debug logging, and precise in-game
 and UTF-8 reproduction steps. These fixes have not been deployed automatically;
 SQL has not been executed, and successful gossip operation with the repaired
 live database remains an operator verification.
+
+The operator confirmed that the pre-UX module, wizard appearance, gossip and
+category teleports work in game. The UX revision was compiled and tested offline;
+its exact client rendering, personalized greeting and close/back behavior still
+need an in-game review after deployment. Tests compare every destination's
+normalized label and gameplay tuple against the donor audit, including duplicate
+rows; only presentation, grouping and navigation were changed.

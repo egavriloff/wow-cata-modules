@@ -127,15 +127,15 @@ struct TerrainMgr
 inline void ClearGossipMenuFor(Player* player) { player->talk.menu.items.clear(); }
 inline void InitGossipMenuFor(Player* player, uint32 id) { player->talk.menu.id = id; }
 inline void AddGossipItemFor(Player* player, GossipOptionIcon, std::string const&, uint32 sender,
-    uint32 action, std::string const&, uint32, bool)
+    uint32 action, std::string const& = "", uint32 = 0, bool = false)
 {
     auto& items = player->talk.menu.items;
     items.emplace(uint32(items.size()), GossipMenuItem{sender, action});
 }
-inline void SendGossipMenuFor(Player* player, uint32, Creature* creature)
+inline void SendGossipMenuFor(Player* player, uint32 textId, Creature* creature)
 {
     ++player->talk.sentMenus;
-    player->talk.textId = DEFAULT_GOSSIP_MESSAGE;
+    player->talk.textId = textId;
     player->talk.interaction.SourceGuid = creature->GetGUID();
 }
 inline void CloseGossipMenuFor(Player* player) { player->closed = true; }

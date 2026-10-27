@@ -44,7 +44,7 @@ class GossipTests(unittest.TestCase):
                 result = subprocess.run(command, text=True, capture_output=True)
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 if "--test-dir" in command:
-                    self.assertIn("28 gossip/payment/registration scenarios passed", result.stdout)
+                    self.assertIn("29 gossip/payment/registration scenarios passed", result.stdout)
             probe = next(build.rglob("utf8-probe.exe" if os.name == "nt" else "utf8-probe"))
             data = subprocess.check_output([str(probe)]).decode("utf-8", errors="strict").split("\0")[:-1]
             from test_destinations import read_cpp

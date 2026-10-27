@@ -22,6 +22,8 @@
 
 namespace
 {
+// This action belongs only to the explicit close item, never to a destination.
+constexpr uint32 CloseAction = uint32(-1);
 bool IsAllowed(Player const* player, Data const& destination)
 {
     return player->getLevel() >= destination.level &&
@@ -49,14 +51,14 @@ void ShowMenu(Player* player, Creature* creature, uint32 menu)
             continue;
 
         std::string popup = destination.next_menu_id ? "" :
-            std::string(TeleportText::Confirmation) + destination.name + "|r?";
+            std::string(TeleportText::Confirmation) + destination.name;
         AddGossipItemFor(player, GossipOptionIcon(destination.icon), destination.name,
             GOSSIP_SENDER_MAIN, i, popup, destination.cost, false);
     }
-    // The donor's custom npc_text IDs were not supplied with any text records.
-    SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature);
+    AddGossipItemFor(player, GOSSIP_ICON_TALK, TeleportText::Close, GOSSIP_SENDER_MAIN, CloseAction);
+    SendGossipMenuFor(player, TeleportText::GreetingId, creature);
     TC_LOG_DEBUG("modules.npc_teleport", "[mod-npc-teleport] GossipMenu sent: menu=%u items=%u text=%u",
-        menu, player->PlayerTalkClass->GetGossipMenu().GetMenuItemCount(), uint32(DEFAULT_GOSSIP_MESSAGE));
+        menu, player->PlayerTalkClass->GetGossipMenu().GetMenuItemCount(), TeleportText::GreetingId);
 }
 
 class NpcTeleport final : public CreatureScript
@@ -82,9 +84,21 @@ public:
             auto const& menu = player->PlayerTalkClass->GetGossipMenu();
             GossipMenuItem const* item = menu.GetItem(gossipListId);
             if (!item || menuId != menu.GetMenuId() || item->Sender != GOSSIP_SENDER_MAIN ||
-                item->OptionType >= TELEPORT_COUNT ||
                 player->PlayerTalkClass->GetInteractionData().SourceGuid != me->GetGUID() ||
                 player->GetNPCIfCanInteractWith(me->GetGUID(), UNIT_NPC_FLAG_GOSSIP) != me)
+            {
+                ClearGossipMenuFor(player);
+                CloseGossipMenuFor(player);
+                return true;
+            }
+
+            if (item->OptionType == CloseAction)
+            {
+                ClearGossipMenuFor(player);
+                CloseGossipMenuFor(player);
+                return true;
+            }
+            if (item->OptionType >= TELEPORT_COUNT)
             {
                 ClearGossipMenuFor(player);
                 CloseGossipMenuFor(player);

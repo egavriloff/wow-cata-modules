@@ -30,13 +30,13 @@ def table_columns(source, table):
     return dict(re.findall(r"^\s*`(\w+)`\s+([^\n]+)", match[1], re.M))
 
 
-TABLES = ("creature_template", "creature", "creature_template_model")
+TABLES = ("creature_template", "creature", "creature_template_model", "npc_text")
 
 
 def current_schema(core):
     """Replay relevant repository DDL, not data, without connecting to a database.
 
-    This intentionally supports only DDL forms used by these three tables.
+    This intentionally supports only DDL forms used by these module-owned inputs.
     Unknown changes fail closed rather than silently validating an old schema.
     """
     schema = {}
@@ -117,7 +117,7 @@ class InstallationTests(unittest.TestCase):
         cls.schema = current_schema(cls.core)
 
     def test_fresh_install_and_repair_have_same_required_values(self):
-        self.assertEqual(set(self.parsed), {"creature_template", "creature_template_model"})
+        self.assertEqual(set(self.parsed), {"creature_template", "creature_template_model", "npc_text"})
         template, template_update = self.parsed["creature_template"]
         self.assertEqual(template["entry"], "900100")
         self.assertEqual(template["ScriptName"], "npc_teleport")
@@ -135,7 +135,7 @@ class InstallationTests(unittest.TestCase):
     def test_columns_and_mandatory_fields_against_tcpp(self):
         used = validate_sql(self.sql, self.schema)
         self.assertTrue(all(used.values()))
-        for table in ("creature_template", "creature_template_model"):
+        for table in ("creature_template", "creature_template_model", "npc_text"):
             columns = self.schema[table]
             values, updates = self.parsed[table]
             self.assertLessEqual(set(values) | set(updates), set(columns))
@@ -192,6 +192,18 @@ class InstallationTests(unittest.TestCase):
         records = [tuple(map(int, m)) for m in re.findall(r"\(29261,\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)", source)]
         self.assertIn((0, 26078, 1, 15595), records)
         self.assertNotEqual(int(self.parsed["creature_template_model"][0]["CreatureDisplayID"]), 29261)
+
+    def test_presentation_update_matches_full_installation(self):
+        sql = (ROOT / "sql/world/gossip_text.sql").read_text(encoding="utf-8")
+        validate_sql(sql, self.schema)
+        self.assertEqual(inserts(sql), {"npc_text": self.parsed["npc_text"]})
+        values, updates = self.parsed["npc_text"]
+        self.assertEqual(values["ID"], "900100")
+        self.assertEqual(values["Probability0"], "1")
+        self.assertEqual(values["BroadcastTextID0"], "0")
+        self.assertEqual({k: v for k, v in values.items() if k != "ID"}, updates)
+        source = (ROOT / "src/teleport_text.h").read_text(encoding="utf-8")
+        self.assertEqual(re.search(r"GreetingId = (\d+)", source)[1], values["ID"])
 
     def test_utf8_source_and_script_name_contract(self):
         for folder in (ROOT / "src", ROOT / "sql"):

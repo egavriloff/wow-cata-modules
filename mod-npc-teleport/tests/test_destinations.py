@@ -31,15 +31,21 @@ class DestinationTests(unittest.TestCase):
     def test_complete_audit_and_preserved_data(self):
         self.assertEqual(len(self.audit), 226)
         self.assertEqual([int(r["donor_index"]) for r in self.audit], list(range(226)))
+        # Audit remains the immutable donor record; UI labels, icons and menu
+        # membership may change, but every gameplay tuple (including duplicates) stays.
+        gameplay = ("cost", "level", "faction", "map", "x", "y", "z", "o")
+        renamed = {"Громовой утес": "Громовой Утёс", "Мертвые Копи": "Мёртвые копи",
+                   "Трон Четырех Ветров": "Трон Четырёх Ветров", "Пиратская бухта": "Пиратская Бухта",
+                   "К-З": "К-3", "Подземелья Нексуса": "Нексус — общий вход",
+                   "Ледяные залы": "Ледяные залы — общий вход"}
         expected = []
         for record in self.audit:
-            if record["status"] == "excluded":
+            if record["status"] == "excluded" or record["next_menu_id"] != "0":
                 continue
-            row = {field: record[field] for field in FIELDS}
-            row["menu_id"] = record["target_menu_id"]
-            expected.append(tuple(row[field] for field in FIELDS))
-        self.assertCountEqual([tuple(r[f] for f in FIELDS) for r in self.rows], expected)
-        self.assertEqual(len(self.rows), 202)
+            name = record["name"].split("|t ")[-1].replace("\\'", "'")
+            expected.append((renamed.get(name, name),) + tuple(record[field] for field in gameplay))
+        self.assertCountEqual([(r["name"],) + tuple(r[f] for f in gameplay) for r in self.rows if r["next_menu_id"] == "0"], expected)
+        self.assertEqual(len(self.rows), 210)
 
     def test_map_and_coordinate_bounds(self):
         maps = set()
@@ -65,8 +71,7 @@ class DestinationTests(unittest.TestCase):
                     visible = [r for r in self.rows if int(r["menu_id"]) == menu
                                and int(r["level"]) <= level and int(r["faction"]) in (0, faction)]
                     self.assertTrue(visible, (faction, level, menu))
-                    self.assertLessEqual(len(visible), 32)
-                    self.assertTrue(any(r["next_menu_id"] == "0" for r in visible))
+                    self.assertLessEqual(len(visible) + 1, 32)  # Explicit Close item.
                     for row in visible:
                         target = int(row["next_menu_id"])
                         if target:
@@ -81,9 +86,29 @@ class DestinationTests(unittest.TestCase):
                             seen.add(current)
                             todo.extend(graph[current] - seen)
                     return seen
-                self.assertEqual(reachable(1), menus)
-                for menu in menus:
+                shown = reachable(1)
+                allowed_destinations = [r for r in self.rows if r["next_menu_id"] == "0"
+                                        and int(r["faction"]) in (0, faction) and int(r["level"]) <= level]
+                self.assertLessEqual({int(r["menu_id"]) for r in allowed_destinations}, shown)
+                for menu in shown:
                     self.assertIn(1, reachable(menu))
+                self.assertNotIn(15 if faction == 2 else 14, shown)
+
+    def test_restrained_layout_and_category_membership(self):
+        for row in self.rows:
+            self.assertNotIn("|", row["name"])
+            self.assertIn(row["icon"], ("GOSSIP_ICON_TALK", "GOSSIP_ICON_TAXI"))
+        roots = {int(r["next_menu_id"]): r["name"] for r in self.rows if r["menu_id"] == "1"}
+        self.assertEqual(roots, {14: "Города Альянса", 15: "Города Орды", 16: "Нейтральные города",
+                               2: "Подземелья: Classic", 3: "Подземелья: BC", 4: "Подземелья: WotLK",
+                               5: "Подземелья: Cataclysm", 7: "Рейды", 20: "PvP и арены", 17: "Путешествия по миру"})
+        for row in self.rows:
+            if row["name"] == "Назад":
+                self.assertEqual(int(row["next_menu_id"]), 17 if int(row["menu_id"]) in (8, 9, 10, 11, 12) else 1)
+        for name in ("Твердыня Крыла Тьмы", "Сумеречный бастион", "Трон Четырёх Ветров",
+                     "Крепость Барадин", "Огненные Просторы", "Душа Дракона"):
+            self.assertEqual([r["menu_id"] for r in self.rows if r["name"] == name], ["7"])
+        self.assertTrue(all(r["menu_id"] == "4" for r in self.rows if r["name"] == "Нексус"))
 
     def test_payment_and_restriction_fields(self):
         destinations = [r for r in self.rows if r["next_menu_id"] == "0"]
