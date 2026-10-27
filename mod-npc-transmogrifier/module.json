@@ -5,5 +5,11 @@
   "entrypoint": "Addmod_npc_transmogrifierScripts",
   "core_revision": "b061f46ef86f84f713ea3956b2318383e0b71278",
   "integration_api": 1,
-  "requires": []
+  "requires": [],
+  "configurations": [
+    {
+      "template": "conf/npc-transmogrifier.conf.dist",
+      "required": true
+    }
+  ]
 }

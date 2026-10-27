@@ -11,11 +11,17 @@ Executed checks and binary linkage evidence are recorded in [verification.md](ve
 1. Build from the workspace with `./tools/build.ps1 -Configuration RelWithDebInfo`.
    `module.json` enables discovery; `Addmod_npc_transmogrifierScripts` registers
    the `npc_transmogrifier` CreatureScript and configuration WorldScript.
-2. Append the settings from `conf/transmogrification.conf.dist` to the existing
-   `[worldserver]` section in the installed `worldserver.conf`. The fragment is
-   not loaded or copied automatically. Do not add another INI section or call
-   `ConfigMgr::LoadInitial` for this module. Startup and `.reload config` read
-   the same settings through native `ConfigMgr`.
+2. Installation creates `modules/npc-transmogrifier.conf` beside the installed
+   `worldserver.conf`. Edit that file; its `[worldserver]` section is required.
+   The module continues to use native `ConfigMgr` getters. The template
+   `conf/npc-transmogrifier.conf.dist` preserves every previous key/default.
+   Reinstallation preserves the user `.conf` and refreshes the adjacent `.conf.dist`;
+   compare and merge new defaults manually. Missing required files or malformed
+   INI abort startup; a failed reload preserves the previous configuration.
+   For an existing installation, copy your `Transmogrification.*` values from
+   `worldserver.conf` into the module file, then remove those main-file entries.
+   Until removed, main-file values take precedence with a migration warning.
+   Back up both files before migration. Never call `LoadInitial` from the module.
 3. Back up databases and stop worldserver/other writers. Review the migrations.
    Use the workspace SQL updater explicitly, with the installed configuration:
 
@@ -74,7 +80,7 @@ it are free, preserving donor behavior. Applying a set does not consume tokens
 or require the original source item again. This is an intentional preset policy,
 not a collection system. Every saved slot is checked before any item changes;
 an incompatible, missing, duplicate or malformed slot rejects the whole set.
-At most ten sets are supported. Names are valid UTF-8, 1–48 bytes, without control
+At most ten sets are supported. Names are valid UTF-8, 1вЂ“48 bytes, without control
 characters or WoW markup separators. Database escaping protects quotes; data
 contains only generated integers. Never import untrusted preset rows.
 
@@ -101,7 +107,7 @@ do not execute MySQL or simulate the 4.3.4 client.
 Before deployment, test on disposable databases: migration apply/reapply and
 schema, registration at startup, slot/back/close navigation, bag selection,
 gold/token deductions and failed payments, individual/all removal, set
-create/apply/delete, names with quotes and Russian text, config reload, item
+create/apply/delete, names with quotes and Russian text, config reload (requires live acceptance), item
 binding, and invalidated selections after item movement. Confirm appearance in
 inventory tooltips, character paper doll and from a second player's client;
 then logout/relog and restart worldserver. Inspect native enchantments and
@@ -110,3 +116,15 @@ money/inventory persistence. Verify refund and trade restrictions.
 See `compatibility.md` for database failure semantics and unverified runtime
 conditions. No server startup, NPC interaction, appearance change or persistence
 test against a running server is claimed.
+
+## Configuration reload and upgrades
+
+The managed bridge reloads the main file and enabled module files as one validated
+snapshot. This module already reads its options in `WorldScript::OnConfigLoad`;
+no new callback or gameplay change is required. ConfigMgr reload is covered by
+an offline C++ harness, but full `.reload config` in a running worldserver is
+not verified. Restart is the deployment acceptance path until that is tested.
+Changing module selection, filenames or the template's allowed key set requires
+reconfigure, rebuild, install and restart. New templates never replace existing
+user settings. See the workspace module integration documentation for the exact
+load order, allowlist and macOS layout.

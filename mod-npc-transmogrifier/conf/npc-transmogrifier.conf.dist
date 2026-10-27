@@ -1,5 +1,6 @@
-# Append these settings inside the existing [worldserver] section of worldserver.conf.
-# This file is a reference fragment, not loaded separately. Reload with .reload config.
+# Module configuration; legacy worldserver.conf values take precedence.
+[worldserver]
+
 # Explicit item entry allow/deny lists, separated by spaces.
 Transmogrification.Allowed = ""
 Transmogrification.NotAllowed = ""
