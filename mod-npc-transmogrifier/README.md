@@ -32,11 +32,12 @@ Executed checks and binary linkage evidence are recorded in [verification.md](ve
 
    No SQL is executed by the build. `sql/characters/001_sets.sql` creates only
    `custom_transmogrification_sets`. `sql/world/001_npc.sql` installs optional
-   template 900101, model 26078 and binding `npc_transmogrifier`; it creates no
-   spawn. Target selection can install characters independently of world.
+   template 900101, legacy model 26078 and binding `npc_transmogrifier`;
+   `sql/world/002_model.sql` then selects the current void model **17704**.
+   Neither migration creates a spawn. Target selection can install characters independently of world.
    World preconditions refuse existing NPC-900101 data rather than overwrite
    an unknown custom installation. The SQL itself is idempotent for manual
-   repair of module-owned rows. No adoption assertions are supplied; an existing
+   repair of module-owned rows. The original migrations have no adoption assertions; an existing
    manual installation needs reviewed assertions before updater adoption.
 4. Restart worldserver. Verify the script binding before explicitly spawning
    template 900101 at a location selected by an administrator. No automatic
@@ -46,6 +47,37 @@ Executed checks and binary linkage evidence are recorded in [verification.md](ve
 The native transmogrifier NPC flag is intentionally absent: the Gossip module
 handles its own pricing and compatibility. Adding the native flag also exposes
 the separate native packet handler and its pricing rules.
+
+## Persistent void model
+
+`sql/migrations.json` appends `world/002_model.sql` after the existing
+`characters/001_sets.sql` and `world/001_npc.sql`; published SQL is unchanged.
+The selected **CreatureDisplayID is 17704**, as requested and confirmed by a
+read-only `tcpp_world` query on 2026-10-28 (`creature` GUID **396675**,
+`id=900101`, `modelid=17704`). The template still used legacy display 26078.
+
+The new migration replaces only NPC 900101's model rows with one index-0 row
+(display 17704, probability 1, VerifiedBuild 0). Existing spawns inherit the
+model through `modelid=0` and Gossip flags through `npcflag=NULL`. The query
+found `npcflag=0` on the existing spawn; zero explicitly disables Gossip in
+TCPP even when the template has `npcflag=1`. Restoring NULL is required in
+addition to changing the model. Template name, flags, faction and
+`ScriptName='npc_transmogrifier'` remain unchanged. Spawn scripts, unit flags,
+positions and every other setting are preserved; no spawn is added.
+The migration is idempotent, and its sidecar includes model/spawn adoption checks.
+
+For an installation with the initial migrations already applied, back up the
+database, stop writers, then use the SQL updater without rebuilding worldserver:
+
+```powershell
+.venv/Scripts/python.exe tools/sql-updater/update.py verify --target world --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+.venv/Scripts/python.exe tools/sql-updater/update.py plan --target world --module mod-npc-transmogrifier --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+.venv/Scripts/python.exe tools/sql-updater/update.py apply --target world --module mod-npc-transmogrifier --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+```
+
+Only the new world migration should be pending. Restart worldserver afterward
+and verify appearance and Gossip on the existing NPC. Do not rerun old SQL or
+rewrite history/checksums. The migration does not change the character database.
 
 ## Gameplay and configuration
 

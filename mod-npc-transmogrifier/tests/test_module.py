@@ -52,7 +52,9 @@ class ModuleTests(unittest.TestCase):
         self.assertIn('workspace', inspect.signature(discover).parameters)
         migrations = discover(WORKSPACE)
         own = [m for m in migrations if m.source == 'module:mod-npc-transmogrifier']
-        self.assertEqual([m.target for m in own], ['characters', 'world'])
+        self.assertEqual([(m.target, m.relative) for m in own],
+                         [('characters', '001_sets.sql'), ('world', '001_npc.sql'),
+                          ('world', '002_model.sql')])
         for migration in own:
             self.assertTrue(list(statements(migration.sql)))
             content = MODULE / 'sql' / migration.target / migration.relative

@@ -140,50 +140,48 @@ The module defaults ON with workspace modules enabled. To disable it, configure
 the existing build directory with `-DTCPP_MODULE_MOD_NPC_TELEPORT=OFF`, then
 rebuild/redeploy. No edits to the integration framework are needed.
 
-## Optional NPC installation
+## NPC installation and model migrations
 
-SQL is **manual**, targets the **world** database, and was not executed during
-development. Install only against a fully updated world schema matching the
-pinned core; the old base schema alone is insufficient.
+Use the workspace SQL updater against the fully updated TCPP world schema;
+see [SQL migration workflow](../../docs/sql-migrations.md). Back up the database
+and stop worldserver/other writers before applying migrations.
 
-1. Stop worldserver, and review [sql/world/install.sql](sql/world/install.sql).
-   Entry **900100** is this module's dedicated custom NPC. The script now
-   creates **or repairs** its template and model, including existing installs.
-   Do not apply it if you have reassigned 900100 to unrelated custom content.
-2. Execute the SQL manually in the matching, fully updated world database with
-   a UTF-8 capable MySQL client. `SET NAMES utf8mb4` protects the Russian name.
-   Fresh insert and repeat update set neutral faction 35, level 85, `npcflag=1`,
-   empty `AIName`, normal interaction flags and `ScriptName='npc_teleport'`.
-3. The wizard appearance is **Windle Sparkshine**, reference NPC entry **29261**,
-   actual **CreatureDisplayID 26078**, index 0, probability 1. The checked-out
-   TCPP `sql/updates/world/4.3.4/2023_09_15_00_world.sql` contains the exact row
-   `(29261, 0, 26078, 1, 15595)`. Only custom NPC 900100 is changed: model index 0
-   is upserted and other models belonging to 900100 are removed. Neither the
-   temporary guard 3167 nor the former model 19646 remains a selectable model
-   for this NPC. The reference NPC is never modified. There is no `DisplayScale`
-   column in this schema and none is used.
-4. Existing `creature` spawns for `id=900100` have appearance, flag and script
-   overrides cleared, so they inherit the repaired template. GUIDs, positions,
-   phases, equipment and respawn settings remain. Spawn `modelid` becomes 0;
-   `npcflag`, `unit_flags` and `unit_flags2` become **NULL**, not zero. Current
-   TCPP treats a present zero flag as an explicit override: `npcflag=0` would
-   disable gossip despite the template's flag 1. ScriptName becomes empty.
-   Review the final SELECTs;
-   the model must be 26078 and the script must be `npc_teleport`. On any SQL
-   error, roll back and investigate; do not force the client to continue.
-5. Deploy the newly built worldserver from
-   `.build/install/windows-modules/RelWithDebInfo/` to your server installation,
-   then **start a new worldserver process**. A template reload does not restore
-   a script rejected at startup. Check its registration messages as described in
-   [runtime-diagnostics.md](runtime-diagnostics.md).
-6. Use the existing spawn, or log in with GM command permission, stand at the
-   desired location and run `.npc add 900100` if no spawn exists. Test with
-   normal Horde and Alliance characters as well as a GM.
+The module's `sql/migrations.json` preserves this explicit order:
 
-Current `ObjectMgr::LoadCreatureTemplateModels` uses `creature_template_model`;
-legacy `modelid1` alone would leave the NPC without an effective display model.
-No database `gossip_menu` or `gossip_menu_option` binding is needed for these
-scripted items. The included `npc_text` row supplies only the greeting. No SQL updater/migration framework is installed by this module.
+1. `world/install.sql`: original template, script binding and greeting.
+2. `world/gossip_text.sql`: greeting migration.
+3. `world/002_model.sql`: current crystal model, **CreatureDisplayID 11490**.
+
+The crystal display was verified with a read-only query against `tcpp_world`
+on 2026-10-28: `creature` GUID **396674**, `id=900100`, `modelid=11490`.
+The template still contained the legacy wizard display 26078. Published SQL
+and its checksums remain unchanged; do not rerun the original installation
+SQL to update an existing NPC, because it restores that old wizard model.
+
+```powershell
+.venv/Scripts/python.exe tools/sql-updater/update.py verify --target world --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+.venv/Scripts/python.exe tools/sql-updater/update.py plan --target world --module mod-npc-teleport --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+.venv/Scripts/python.exe tools/sql-updater/update.py apply --target world --module mod-npc-teleport --config .build/install/windows-modules/RelWithDebInfo/worldserver.conf
+```
+
+For an installation whose original migrations are already recorded as applied,
+only the new model migration is pending. Fresh installations run all three in
+order. Existing manually installed data without migration history requires the
+separate reviewed adoption workflow; do not rewrite history or old assertions.
+
+The new migration replaces only NPC 900100's `creature_template_model` rows
+with one index-0 row (display 11490, probability 1, VerifiedBuild 0). Existing
+spawns use `modelid=0` to inherit that model and `npcflag=NULL` to inherit the
+template's Gossip flag. A spawn-level zero disables Gossip even if the template
+has `npcflag=1`. Template name, faction, flags and `ScriptName='npc_teleport'`
+are preserved, as are spawn positions, scripts, unit flags and all other settings.
+No spawns are added. Repeating the new migration produces the same state.
+
+Restart worldserver after applying SQL to load the model and flags, then check
+the existing NPC's appearance and Gossip with normal Horde/Alliance characters.
+No worldserver rebuild is required for this SQL-only update. See
+[runtime diagnostics](runtime-diagnostics.md) for script registration checks.
+The module's `npc_text` greeting does not need database gossip menu bindings.
 
 ## Selection and payment safety
 

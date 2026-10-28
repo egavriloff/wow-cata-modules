@@ -59,6 +59,34 @@
           }
         }
       ]
+    },
+    {
+      "file": "world/002_model.sql",
+      "adopt": [
+        {
+          "table": "creature_template_model",
+          "where": {
+            "CreatureID": 900100
+          },
+          "count": 1,
+          "values": {
+            "Idx": 0,
+            "CreatureDisplayID": 11490,
+            "Probability": 1,
+            "VerifiedBuild": 0
+          }
+        },
+        {
+          "table": "creature",
+          "where": {
+            "id": 900100
+          },
+          "values": {
+            "modelid": 0,
+            "npcflag": null
+          }
+        }
+      ]
     }
   ]
 }
