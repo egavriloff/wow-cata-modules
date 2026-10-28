@@ -146,9 +146,12 @@ struct Config {
 };
 inline Config config; inline Config* sConfigMgr=&config;
 struct ObjectMgr {
+ uint32 GetScriptId(char const*) { return 1; }
  std::map<uint32,ItemTemplate> templates;
  ItemTemplate const* GetItemTemplate(uint32 entry) { auto i=templates.find(entry); return i==templates.end()?nullptr:&i->second; }
 };
 inline ObjectMgr objectMgr; inline ObjectMgr* sObjectMgr=&objectMgr;
 inline bool Utf8toWStr(std::string const&,std::wstring&) { return true; }
 #define TC_LOG_INFO(...) ((void)0)
+#define TC_LOG_DEBUG(...) ((void)0)
+#define TC_LOG_ERROR(...) ((void)0)

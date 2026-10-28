@@ -119,6 +119,14 @@ test against a running server is claimed.
 
 ## Configuration reload and upgrades
 
+Startup logs report the database ScriptID for `npc_transmogrifier` on
+`server.loading`, with an error if it is zero. For a short diagnostic session,
+enable `Logger.modules.npc_transmogrifier=2,Server` in the main server config
+(using an existing DEBUG-capable file appender). DEBUG markers identify `GetAI`,
+`GossipHello` and a sent main menu with item count. Linking alone does not certify
+runtime binding or client display. The workspace's `docs/utf8-gossip-diagnostics.md`
+documents the separate Windows console investigation and native-NPC comparison.
+
 The managed bridge reloads the main file and enabled module files as one validated
 snapshot. This module already reads its options in `WorldScript::OnConfigLoad`;
 no new callback or gameplay change is required. ConfigMgr reload is covered by

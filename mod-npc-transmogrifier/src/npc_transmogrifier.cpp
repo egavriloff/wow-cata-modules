@@ -571,6 +571,8 @@ class TransmogMenus {
 
 
     bool OnGossipHello(Player* player, Creature* creature) {
+      TC_LOG_DEBUG("modules.npc_transmogrifier", "[mod-npc-transmogrifier] GossipHello: entry=%u scriptId=%u",
+          creature->GetEntry(), creature->GetScriptId());
       ClearGossipMenuFor(player);
       InitGossipMenuFor(player, 900101);
       for (uint8 slot = EQUIPMENT_SLOT_START; slot < EQUIPMENT_SLOT_END; ++slot) {
@@ -605,6 +607,8 @@ class TransmogMenus {
 
       AddGossipItemFor(player, GOSSIP_ICON_TALK, "Закрыть", 1000, 0);
       SendGossipMenuFor(player, DEFAULT_GOSSIP_MESSAGE, creature->GetGUID());
+      TC_LOG_DEBUG("modules.npc_transmogrifier", "[mod-npc-transmogrifier] GossipMenu sent: menu=900101 items=%zu",
+          player->PlayerTalkClass->GetGossipMenu().GetMenuItems().size());
       return true;
     }
 
@@ -999,10 +1003,18 @@ public:
       return Select(player, menu, list, code);
     }
   };
-  CreatureAI* GetAI(Creature* creature) const override { return new AI(creature); }
+  CreatureAI* GetAI(Creature* creature) const override {
+    TC_LOG_DEBUG("modules.npc_transmogrifier", "[mod-npc-transmogrifier] GetAI: entry=%u scriptId=%u",
+        creature->GetEntry(), creature->GetScriptId());
+    return new AI(creature);
+  }
 };
 
 void Addmod_npc_transmogrifierScripts() {
+  uint32 const scriptId = sObjectMgr->GetScriptId("npc_transmogrifier");
+  TC_LOG_INFO("server.loading", "[mod-npc-transmogrifier] Loader called: npc_transmogrifier database scriptId=%u", scriptId);
   new npc_transmogrifier_config();
   new npc_transmogrifier();
+  if (!scriptId)
+    TC_LOG_ERROR("server.loading", "[mod-npc-transmogrifier] npc_transmogrifier is not bound in the loaded world database; verify module SQL and fully restart worldserver");
 }
