@@ -1,0 +1,73 @@
+[worldserver]
+# Disabled until operator runtime acceptance. See README.md for formulas and tuning.
+# Profiles: Balanced, Solo, Duo (case sensitive). Only 1-2 participants supported.
+# Overrides: "id:health:damage;id:health:damage"; exclusions: comma-separated IDs.
+# Multipliers are finite and bounded; invalid options log and use defaults.
+# Successful reload is deferred until combat ends and the settle window expires.
+
+SoloPlay.Enable = 0
+SoloPlay.Profile = Balanced
+SoloPlay.Legacy.Enable = 1
+SoloPlay.Heroic.Enable = 1
+SoloPlay.Dungeons.Enable = 1
+SoloPlay.Raids.Enable = 1
+SoloPlay.SettleMilliseconds = 5000
+SoloPlay.Legacy.SkipLevelGap = 10
+SoloPlay.HealthExponent = 0.55
+SoloPlay.DamageExponent = 0.35
+SoloPlay.MaximumMultiplier = 1.0
+SoloPlay.MinimumHealth = 0.15
+SoloPlay.MinimumDamage = 0.3
+SoloPlay.MinimumArmor = 0.6
+SoloPlay.MinimumMana = 0.5
+SoloPlay.Dungeon.Health = 1
+SoloPlay.Dungeon.Damage = 1
+SoloPlay.Raid.Health = 1
+SoloPlay.Raid.Damage = 1
+SoloPlay.Heroic.Health = 1.1
+SoloPlay.Heroic.Damage = 1.1
+SoloPlay.Boss.Health = 1.2
+SoloPlay.Boss.Damage = 1.1
+SoloPlay.Elite.Health = 1
+SoloPlay.Elite.Damage = 1
+SoloPlay.Balanced.Health = 1
+SoloPlay.Balanced.Damage = 1
+SoloPlay.Balanced.ArmorExponent = 0.15
+SoloPlay.Balanced.ManaExponent = 0.15
+SoloPlay.Balanced.Armor = 1
+SoloPlay.Balanced.Healing = 1
+SoloPlay.Balanced.Mana = 1
+SoloPlay.Balanced.PlayerDamage = 1
+SoloPlay.Balanced.PlayerHealing = 1.15
+SoloPlay.Balanced.IncomingDamage = 0.9
+SoloPlay.Balanced.MinPlayers = 1
+SoloPlay.Balanced.MaxPlayers = 2
+SoloPlay.Solo.Health = 0.9
+SoloPlay.Solo.Damage = 0.9
+SoloPlay.Solo.ArmorExponent = 0.15
+SoloPlay.Solo.ManaExponent = 0.15
+SoloPlay.Solo.Armor = 1
+SoloPlay.Solo.Healing = 1
+SoloPlay.Solo.Mana = 1
+SoloPlay.Solo.PlayerDamage = 1
+SoloPlay.Solo.PlayerHealing = 1.35
+SoloPlay.Solo.IncomingDamage = 0.8
+SoloPlay.Solo.MinPlayers = 1
+SoloPlay.Solo.MaxPlayers = 1
+SoloPlay.Duo.Health = 1
+SoloPlay.Duo.Damage = 1
+SoloPlay.Duo.ArmorExponent = 0.15
+SoloPlay.Duo.ManaExponent = 0.15
+SoloPlay.Duo.Armor = 1
+SoloPlay.Duo.Healing = 1
+SoloPlay.Duo.Mana = 1
+SoloPlay.Duo.PlayerDamage = 1
+SoloPlay.Duo.PlayerHealing = 1.1
+SoloPlay.Duo.IncomingDamage = 0.95
+SoloPlay.Duo.MinPlayers = 2
+SoloPlay.Duo.MaxPlayers = 2
+SoloPlay.ExcludedMaps = ""
+SoloPlay.ExcludedCreatures = ""
+SoloPlay.ExcludedSpells = ""
+SoloPlay.MapOverrides = ""
+SoloPlay.CreatureOverrides = ""
