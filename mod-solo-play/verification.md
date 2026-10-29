@@ -77,7 +77,7 @@ deleted generated worktree output. Historical upgrade preimages remain checked.
 New module and bridge files must be included in the future independent modules
 and workspace commits; no staging, commit or submodule reference update is done.
 
-The final audit used new .build/solo-play-audit-core and
+The final audit used new .build/core/worktrees/solo-play-audit and
 .build/solo-play-audit-build directories, with a complete RelWithDebInfo build.
 Real CMake OFF -> build/link -> ON -> build/link retained the NPC modules;
 OFF worldserver had neither a SoloPlay loader call nor its lifecycle literal.

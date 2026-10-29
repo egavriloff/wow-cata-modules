@@ -25,7 +25,7 @@ class SoloPlayTests(unittest.TestCase):
             script = (MODULE / 'src/mod_solo_play.cpp').read_text()
             script = re.sub(r'^#include "(?!ScalingPolicy.h)[^"]+"\n', '', script, flags=re.M)
             (root / 'actual_script.cpp').write_text(script)
-            core = WORKSPACE / '.build/managed-core/src/server/game/Entities/Unit'
+            core = WORKSPACE / '.build/core/managed/src/server/game/Entities/Unit'
             header = (core / 'Unit.h').read_text()
             cpp = (core / 'Unit.cpp').read_text()
             heal_class = header[header.index('class TC_GAME_API HealInfo'):header.index('class TC_GAME_API ProcEventInfo')]
@@ -51,7 +51,7 @@ class SoloPlayTests(unittest.TestCase):
             self.assertEqual(hashlib.sha256((WORKSPACE / file).read_bytes()).hexdigest(), expected, file)
 
     def test_native_damage_bridge_dispatches_once_per_pipeline(self):
-        core = WORKSPACE / '.build/managed-core/src/server/game'
+        core = WORKSPACE / '.build/core/managed/src/server/game'
         if not core.exists():
             self.skipTest('Run managed core preparation first')
         unit = (core / 'Entities/Unit/Unit.cpp').read_text()

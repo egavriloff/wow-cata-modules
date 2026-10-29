@@ -246,7 +246,7 @@ python -m unittest discover -s modules/mod-npc-teleport/tests -v
 Build output: `.build/npc-teleport-ux-build.log`; integration tests:
 `.build/npc-teleport-fix-integration-tests.log`; module tests:
 `.build/npc-teleport-ux-tests.log`. Generated selection and loader are under
-`.build/windows-modules/workspace-modules/`; installed worldserver is under
+`.build/builds/windows-modules/workspace-modules/`; installed worldserver is under
 `.build/install/windows-modules/RelWithDebInfo/`. Existing nonfatal CMP0218
 integration policy warnings remain; the integration framework was not changed.
 
