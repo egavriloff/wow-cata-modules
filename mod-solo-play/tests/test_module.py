@@ -18,8 +18,9 @@ class SoloPlayTests(unittest.TestCase):
     def test_controller_behavior(self):
         cmake = os.environ.get('CMAKE') or shutil.which('cmake')
         self.assertTrue(cmake, 'Set CMAKE or add CMake to PATH for the native harness')
-        (WORKSPACE / '.build').mkdir(exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix='solo-play-test-', dir=WORKSPACE / '.build') as temp:
+        scratch = WORKSPACE / '.build/temp/solo-play-tests'
+        scratch.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='solo-play-test-', dir=scratch) as temp:
             root = Path(temp)
             script = (MODULE / 'src/mod_solo_play.cpp').read_text()
             script = re.sub(r'^#include "(?!ScalingPolicy.h)[^"]+"\n', '', script, flags=re.M)
